@@ -48,7 +48,7 @@ function fix:create_session(endpoint, port, sender_comp_id, target_comp_id, hear
     self.client:connect(endpoint, port)
     local logon = self:new_msg(self.MsgTypes.Logon)
     logon.HeartBtInt = heartbeat_int
-    logon.EncryptMethod = 'N'
+    logon.EncryptMethod = "N"
     self:send(logon)
 end
 
@@ -108,8 +108,9 @@ function fix.fix_to_pipe(msg)
     return result
 end
 
-function fix.msg_to_fix(msg)
+local function fields_to_fix(msg)
     local result = ""
+    -- handle header fields first
     for tag, value in pairs(msg) do
         if value ~= nil and header_fields[tag] and tag ~= 8 then
             result = result .. tag .. "=" .. value .. "\1"
@@ -121,33 +122,38 @@ function fix.msg_to_fix(msg)
             if #value > 0 then
                 result = result .. tag .. "=" .. #value .. "\1"
             end
-            result = result .. fix.msg_to_fix(value)
+            result = result .. fields_to_fix(value)
         else
             if value ~= nil and not header_fields[tag] and type(value) ~= "function" then
                 result = result .. tag .. "=" .. value .. "\1"
             end
         end
     end
-    -- will not run in recursive calls
-    if msg[8] then
-        result = "8=" .. msg[8] .. "\1" .. "9=" .. #result .. "\1" .. result
-        local checksum = 0
-        for i = 1, #result do
-            checksum = checksum + string.byte(result, i)
-        end
-        checksum = checksum % 256
-        -- checksum always 3 digits
-        local prefix = "00"
-        if checksum > 100 then
-            prefix = ""
-        else
-            if checksum > 10 then
-                prefix = "0"
-            end
-        end
-        result = result .. "10=" .. prefix .. checksum .. "\1"
-    end
     return result
+end
+
+local function calculate_checksum(msg)
+    local checksum = 0
+    for i = 1, #msg do
+        checksum = checksum + string.byte(msg, i)
+    end
+    checksum = checksum % 256
+    -- checksum always 3 digits
+    local prefix = ""
+    if checksum < 100 then
+        prefix = "0"
+    end
+    if checksum < 10 then
+        prefix = "00"
+    end
+    return prefix .. checksum
+end
+
+function fix.msg_to_fix(msg)
+    local result = fields_to_fix(msg)
+    result = "8=" .. msg[8] .. "\19=" .. #result .. "\1" .. result
+    local checksum = calculate_checksum(result)
+    return result .. "10=" .. checksum .. "\1"
 end
 
 return fix

@@ -2,6 +2,29 @@ Tags = require("lib/luafix.tags")
 
 local fix = {}
 
+local msg_mt = {}
+msg_mt.__index = function(t, k)
+    if type(k) == "number" then
+        return rawget(t, k)
+    end
+    local tag = Tags[k]
+    if tag ~= nil then
+        return rawget(t, tag)
+    end
+    error("Incorrect tag name: " .. k)
+end
+msg_mt.__newindex = function(t, k, v)
+    if type(k) == "number" then
+        return rawset(t, k, v)
+    end
+    local tag = Tags[k]
+    if tag ~= nil then
+        return rawset(t, tag, v)
+    end
+    error("Incorrect tag name: " .. k)
+end
+local group_mt = {}
+
 local header_fields = {
     [8] = true,
     [9] = true,
@@ -39,7 +62,15 @@ fix.MsgTypes = {
     QuoteCancel = "Z",
 }
 
-function fix:create_session(endpoint, port, sender_comp_id, target_comp_id, heartbeat_int)
+function fix:create_session(
+    endpoint,
+    port,
+    sender_comp_id,
+    target_comp_id,
+    heartbeat_int,
+    username,
+    password
+)
     local socket = require("socket")
     self.sender_comp_id = sender_comp_id
     self.target_comp_id = target_comp_id
@@ -49,11 +80,29 @@ function fix:create_session(endpoint, port, sender_comp_id, target_comp_id, hear
     local logon = self:new_msg(self.MsgTypes.Logon)
     logon.HeartBtInt = heartbeat_int
     logon.EncryptMethod = "N"
+    logon.Username = username
+    logon.Password = password
     self:send(logon)
+    self:wait_for_msg(fix.MsgTypes.Logon)
 end
 
 function fix:send(msg)
     self.client:send(fix.msg_to_fix(msg) .. "\n")
+end
+
+local function get_msg_type(msg)
+    return string.match(msg, "35=([^\1])")
+end
+
+-- TODO: Ensure full messages are received? Is this necessary with TCP?
+function fix:wait_for_msg(msg_type)
+    local msg, err
+    repeat
+        -- blocking
+        msg, err = self.client:receive()
+        assert(not err, err)
+        print("incoming:", fix.fix_to_pipe(msg))
+    until get_msg_type(msg) == msg_type
 end
 
 function fix:new_msg(msg_type)
@@ -65,29 +114,8 @@ function fix:new_msg(msg_type)
         [49] = self.sender_comp_id,
         [56] = self.target_comp_id,
     }
+    setmetatable(msg, msg_mt)
     -- could check msg_type and add fields in needed like Account<1> from self.account
-    local mt = {}
-    setmetatable(msg, mt)
-    mt.__index = function(t, k)
-        if type(k) == "number" then
-            return rawget(t, k)
-        end
-        local tag = Tags[k]
-        if tag ~= nil then
-            return rawget(t, tag)
-        end
-        error("Incorrect tag name: " .. k)
-    end
-    mt.__newindex = function(t, k, v)
-        if type(k) == "number" then
-            return rawset(t, k, v)
-        end
-        local tag = Tags[k]
-        if tag ~= nil then
-            return rawset(t, tag, v)
-        end
-        error("Incorrect tag name: " .. k)
-    end
     return msg
 end
 
@@ -98,8 +126,7 @@ function fix.new_repeating_group(...)
             table.insert(self, group)
         end
     end
-    local mt = {}
-    setmetatable(repeating_group, mt)
+    setmetatable(repeating_group, group_mt)
     return repeating_group
 end
 

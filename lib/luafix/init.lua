@@ -170,6 +170,16 @@ local function table_to_fix(msg)
     return result
 end
 
+function fix.fix_to_table(fix_msg)
+    local msg = {}
+    setmetatable(msg, msg_mt)
+    for field in fix_msg:gmatch("([^\1]+)\1") do
+        local key, value = field:match("([^=]+)=(.+)")
+        msg[tonumber(key)] = value
+    end
+    return msg
+end
+
 local function calculate_checksum(msg)
     local checksum = 0
     for i = 1, #msg do

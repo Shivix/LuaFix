@@ -65,8 +65,9 @@ fix.MsgTypes = {
 }
 
 local session = {}
+local session_mt = { __index = session }
 
-function fix.create_session(
+function fix.new_session(
     endpoint,
     port,
     sender_comp_id,
@@ -75,7 +76,8 @@ function fix.create_session(
     username,
     password
 )
-    local new_sess = session
+    local new_sess = {}
+    setmetatable(new_sess, session_mt)
     new_sess.sender_comp_id = sender_comp_id
     new_sess.target_comp_id = target_comp_id
     -- initiator
@@ -170,6 +172,7 @@ local function table_to_fix(msg)
     return result
 end
 
+-- TODO: handle repeating groups
 function fix.fix_to_table(fix_msg)
     local msg = {}
     setmetatable(msg, msg_mt)

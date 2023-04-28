@@ -101,16 +101,26 @@ local function get_msg_type(msg)
     return string.match(msg, "35=([^\1])")
 end
 
--- TODO: Ensure full messages are received? Is this necessary with TCP?
-function session:wait_for_msg(msg_type)
-    local msg, err
+function session:wait_for_msg(msg_type, timeout_fn)
+    local data = ""
     repeat
-        -- blocking
-        msg, err = self.client:receive()
-        assert(not err, err)
-        print("incoming:", fix.soh_to_pipe(msg))
-    until get_msg_type(msg) == msg_type
-    return msg
+        data = ""
+        repeat
+            local chunk, err, partial = self.client:receive(100)
+            if chunk then
+                data = data .. chunk
+            elseif partial then
+                data = data .. partial
+            elseif err == "timeout" then
+                if timeout_fn ~= nil then
+                    timeout_fn()
+                end
+            else
+                error(err)
+            end
+        until chunk == nil
+    until get_msg_type(data) == msg_type
+    return data
 end
 
 function session:new_msg(msg_type)

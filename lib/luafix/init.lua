@@ -1,15 +1,16 @@
-Tags = require("lib/luafix.tags")
-
 local socket = require("socket")
 
 local fix = {}
+fix.Tags = require("lib/luafix.tags")
+
+fix.InternalLogging = false
 
 local msg_mt = {}
 msg_mt.__index = function(t, k)
     if type(k) == "number" then
         return rawget(t, k)
     end
-    local tag = Tags[k]
+    local tag = fix.Tags[k]
     if tag ~= nil then
         return rawget(t, tag)
     end
@@ -19,12 +20,13 @@ msg_mt.__newindex = function(t, k, v)
     if type(k) == "number" then
         return rawset(t, k, v)
     end
-    local tag = Tags[k]
+    local tag = fix.Tags[k]
     if tag ~= nil then
         return rawset(t, tag, v)
     end
     error("Incorrect tag name: " .. k)
 end
+
 local group_mt = {}
 
 local header_fields = {
@@ -64,6 +66,33 @@ fix.MsgTypes = {
     QuoteCancel = "Z",
 }
 
+local function get_msg_type(msg)
+    return string.match(msg, "35=([^\1])")
+end
+
+local function log_msg(msg)
+    if fix.InternalLogging then
+        print(fix.soh_to_pipe(msg))
+    end
+end
+
+local function calculate_checksum(msg)
+    local checksum = 0
+    for i = 1, #msg do
+        checksum = checksum + string.byte(msg, i)
+    end
+    checksum = checksum % 256
+    -- checksum always 3 digits
+    local prefix = ""
+    if checksum < 100 then
+        prefix = "0"
+    end
+    if checksum < 10 then
+        prefix = "00"
+    end
+    return prefix .. checksum
+end
+
 local session = {}
 local session_mt = { __index = session }
 
@@ -82,6 +111,7 @@ function fix.new_session(
     new_sess.target_comp_id = target_comp_id
     -- initiator
     new_sess.client = socket.tcp()
+    new_sess.client:settimeout(0)
     new_sess.client:connect(endpoint, port)
     local logon = new_sess:new_msg(fix.MsgTypes.Logon)
     logon.HeartBtInt = heartbeat_int
@@ -95,10 +125,6 @@ end
 
 function session:send(msg)
     self.client:send(fix.msg_to_fix(msg))
-end
-
-local function get_msg_type(msg)
-    return string.match(msg, "35=([^\1])")
 end
 
 function session:wait_for_msg(msg_type, timeout_fn)
@@ -120,6 +146,7 @@ function session:wait_for_msg(msg_type, timeout_fn)
             end
         until chunk == nil
     until get_msg_type(data) == msg_type
+    log_msg(data)
     return data
 end
 
@@ -191,23 +218,6 @@ function fix.fix_to_table(fix_msg)
         msg[tonumber(key)] = value
     end
     return msg
-end
-
-local function calculate_checksum(msg)
-    local checksum = 0
-    for i = 1, #msg do
-        checksum = checksum + string.byte(msg, i)
-    end
-    checksum = checksum % 256
-    -- checksum always 3 digits
-    local prefix = ""
-    if checksum < 100 then
-        prefix = "0"
-    end
-    if checksum < 10 then
-        prefix = "00"
-    end
-    return prefix .. checksum
 end
 
 function fix.msg_to_fix(msg)

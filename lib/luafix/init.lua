@@ -27,7 +27,8 @@ msg_mt.__newindex = function(t, k, v)
     error("Incorrect tag name: " .. k)
 end
 
-local group_mt = {}
+local repeating_group = {}
+local repeating_group_mt = { __index = repeating_group }
 
 local header_fields = {
     [8] = true,
@@ -42,6 +43,47 @@ local header_fields = {
     [115] = true,
     [116] = true,
     [128] = true,
+}
+
+-- reference table for repeating groups
+local repeating_group_fields = {
+    [78] = {
+        [79] = true,
+        [80] = true,
+        [467] = true,
+        [661] = true,
+    },
+    [268] = {
+        [15] = true,
+        [58] = true,
+        [126] = true,
+        [269] = true,
+        [270] = true,
+        [271] = true,
+        [272] = true,
+        [273] = true,
+        [276] = true,
+        [290] = true,
+        [299] = true,
+        [432] = true,
+    },
+    [382] = {
+        [375] = true,
+        [337] = true,
+        [437] = true,
+        [438] = true,
+        [655] = true,
+    },
+    [453] = {
+        [447] = true,
+        [448] = true,
+        [452] = true,
+     --[[ TODO: if type == table is sub group
+        [802] = {
+            [523] = true,
+            [803] = true,
+        },]]
+    },
 }
 
 fix.MsgTypes = {
@@ -155,24 +197,26 @@ function session:new_msg(msg_type)
         [8] = "FIX.4.4",
         -- Base on? Separate funcs for message types?
         [35] = msg_type,
-        -- based on some session config or something?
         [49] = self.sender_comp_id,
         [56] = self.target_comp_id,
     }
     setmetatable(msg, msg_mt)
-    -- could check msg_type and add fields in needed like Account<1> from self.account
     return msg
 end
 
+function repeating_group:append(...)
+    local new_group = { ... }
+    setmetatable(new_group, msg_mt)
+    table.insert(self, new_group)
+end
+
 function fix.new_repeating_group(...)
-    local repeating_group = { ... }
-    function repeating_group:add_groups(...)
-        for _, group in ipairs { ... } do
-            table.insert(self, group)
-        end
+    local new_repeating_group = { ... }
+    setmetatable(new_repeating_group, repeating_group_mt)
+    for _, group in ipairs { ... } do
+        setmetatable(group, msg_mt)
     end
-    setmetatable(repeating_group, group_mt)
-    return repeating_group
+    return new_repeating_group
 end
 
 function fix.soh_to_pipe(msg)
@@ -209,15 +253,40 @@ local function table_to_fix(msg)
     return result
 end
 
--- TODO: handle repeating groups
 function fix.fix_to_table(fix_msg)
-    local msg = {}
-    setmetatable(msg, msg_mt)
+    local result = {}
+    setmetatable(result, msg_mt)
+
+    local current_group = {}
+    setmetatable(current_group, msg_mt)
+    local repeat_group = { current_group }
+    setmetatable(repeat_group, repeating_group_mt)
+    local current_repeat = {}
+
     for field in fix_msg:gmatch("([^\1]+)\1") do
         local key, value = field:match("([^=]+)=(.+)")
-        msg[tonumber(key)] = value
+        local tag = tonumber(key)
+        if tag == nil then
+            error("invalid tag found")
+        end
+
+        -- start of repeating group
+        if repeating_group_fields[tag] ~= nil then
+            current_repeat = repeating_group_fields[tag]
+            result[tag] = repeat_group
+        -- part of current repeating group.
+        elseif current_repeat[tag] then
+            -- end of current group
+            if current_group[tag] ~= nil then
+                repeat_group:append()
+                current_group = repeat_group[#repeat_group]
+            end
+            current_group[tag] = value
+        else
+            result[tag] = value
+        end
     end
-    return msg
+    return result
 end
 
 function fix.msg_to_fix(msg)

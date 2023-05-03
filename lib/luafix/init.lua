@@ -225,8 +225,7 @@ function fix.soh_to_pipe(msg)
 end
 
 function fix.now()
-    local now = os.time()
-    return os.date("%Y%m%d-%H:%M:%S.") .. string.format("%03d", now % 1000)
+    return os.date("%Y%m%d-%H:%M:%S.") .. math.floor(socket.gettime() * 1000) % 1000
 end
 
 local function table_to_fix(msg)

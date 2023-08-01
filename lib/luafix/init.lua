@@ -2,6 +2,7 @@ local socket = require("socket")
 
 local fix = {}
 fix.Tags = require("lib/luafix.tags")
+fix.Values = require("lib/luafix.values")
 
 fix.InternalLogging = false
 
@@ -52,6 +53,9 @@ local repeating_group_fields = {
         [80] = true,
         [467] = true,
         [661] = true,
+    },
+    [267] = {
+        [269] = true,
     },
     [268] = {
         [15] = true,
@@ -147,6 +151,7 @@ function fix.new_session(
     username,
     password
 )
+    -- TODO: basic version of new_msg outside of session that can use here and use in tests
     local new_sess = {}
     setmetatable(new_sess, session_mt)
     new_sess.sender_comp_id = sender_comp_id
@@ -166,11 +171,12 @@ function fix.new_session(
 end
 
 function session:send(msg)
+    assert(getmetatable(msg) == msg_mt)
     self.client:send(fix.msg_to_fix(msg))
 end
 
 function session:wait_for_msg(msg_type, timeout_fn)
-    local data = ""
+    local data
     repeat
         data = ""
         repeat
@@ -226,6 +232,23 @@ end
 
 function fix.now()
     return os.date("%Y%m%d-%H:%M:%S.") .. math.floor(socket.gettime() * 1000) % 1000
+end
+
+function fix.sweep_ladder(msg, qty, side)
+    -- should be multiple orders for each level
+    assert(getmetatable(msg) == msg_mt)
+    for _, group in ipairs(msg.NoMDEntries) do
+        if tonumber(group.MDEntryType) == side then
+            if group.MDEntryType <= qty then
+            else
+                -- sweep (partial) for final time
+                return
+            end
+            qty = qty - group.MDEntrySize
+            print(group.MDEntryPx)
+            print(group.MDEntrySize)
+        end
+    end
 end
 
 local function table_to_fix(msg)
@@ -289,6 +312,7 @@ function fix.fix_to_table(fix_msg)
 end
 
 function fix.msg_to_fix(msg)
+    assert(getmetatable(msg) == msg_mt)
     local result = table_to_fix(msg)
     result = "8=" .. msg[8] .. "\1" .. "9=" .. #result .. "\1" .. result
     local checksum = calculate_checksum(result)

@@ -142,6 +142,14 @@ end
 local session = {}
 local session_mt = { __index = session }
 
+function fix.null_session()
+    local new_sess = {}
+    setmetatable(new_sess, session_mt)
+    new_sess.sender_comp_id = "NULL_SENDER"
+    new_sess.target_comp_id = "NULL_TARGET"
+    return new_sess
+end
+
 function fix.new_session(
     endpoint,
     port,
@@ -172,6 +180,7 @@ end
 
 function session:send(msg)
     assert(getmetatable(msg) == msg_mt)
+    assert(self.client ~= nil)
     self.client:send(fix.msg_to_fix(msg))
 end
 local function check_msg_type(data, msg_types)
@@ -234,6 +243,10 @@ end
 
 function fix.soh_to_pipe(msg)
     local result, _ = string.gsub(msg, "\1", "|")
+    return result
+end
+function fix.pipe_to_soh(msg)
+    local result, _ = string.gsub(msg, "|", "\1")
     return result
 end
 

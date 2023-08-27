@@ -174,8 +174,17 @@ function session:send(msg)
     assert(getmetatable(msg) == msg_mt)
     self.client:send(fix.msg_to_fix(msg))
 end
-
-function session:wait_for_msg(msg_type, timeout_fn)
+local function check_msg_type(data, msg_types)
+    local rcvd_msg_type = get_msg_type(data)
+    for _, msg_type in ipairs(msg_types) do
+        if rcvd_msg_type == msg_type then
+            return true
+        end
+    end
+    return false
+end
+function session:wait_for_msg(...)
+    local msg_types = {...}
     local data
     repeat
         data = ""
@@ -185,16 +194,14 @@ function session:wait_for_msg(msg_type, timeout_fn)
                 data = data .. chunk
             elseif partial then
                 data = data .. partial
-            elseif err == "timeout" then
-                if timeout_fn ~= nil then
-                    timeout_fn()
-                end
             else
                 error(err)
             end
         until chunk == nil
-    until get_msg_type(data) == msg_type
-    log_msg(data)
+    until check_msg_type(data, msg_types)
+    if data ~= "" then
+        log_msg(data)
+    end
     return data
 end
 

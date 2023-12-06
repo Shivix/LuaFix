@@ -27,6 +27,9 @@ msg_mt.__newindex = function(t, k, v)
     end
     error("Incorrect tag name: " .. k)
 end
+msg_mt.__tostring = function(t)
+    return fix.soh_to_pipe(fix.msg_to_fix(t))
+end
 
 local repeating_group = {}
 local repeating_group_mt = { __index = repeating_group }

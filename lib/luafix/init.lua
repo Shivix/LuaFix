@@ -1,8 +1,12 @@
 local socket = require("socket")
 
 local fix = {}
+
+local old_path = package.path
+package.path = package.path .. ";lib/?.lua"
 fix.Tags = require("lib/luafix.tags")
 fix.Values = require("lib/luafix.values")
+package.path = old_path
 
 fix.InternalLogging = false
 
@@ -85,7 +89,7 @@ local repeating_group_fields = {
         [447] = true,
         [448] = true,
         [452] = true,
-     --[[ TODO: if type == table is sub group
+        --[[ TODO: if type == table is sub group
         [802] = {
             [523] = true,
             [803] = true,
@@ -105,6 +109,7 @@ fix.MsgTypes = {
     QuoteStatusRequest = "a",
     Logon = "A",
     NewOrderSingle = "D",
+    OrderCancelRequest = "F",
     QuoteRequest = "R",
     Quote = "S",
     MarketDataRequest = "V",
@@ -208,7 +213,7 @@ local function check_full_msg(data)
 end
 
 function session:wait_for_msg(...)
-    local msg_types = {...}
+    local msg_types = { ... }
     local data
     repeat
         data = ""

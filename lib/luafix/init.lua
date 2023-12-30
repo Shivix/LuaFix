@@ -143,7 +143,14 @@ local function calculate_checksum(msg)
 end
 
 local session = {}
-local session_mt = { __index = session }
+local session_mt = {
+    __index = session,
+    __gc = function(self)
+        if self.client then
+            self.client:close()
+        end
+    end,
+}
 
 function fix.null_session()
     local new_sess = {}
@@ -195,6 +202,11 @@ local function check_msg_type(data, msg_types)
     end
     return false
 end
+
+local function check_full_msg(data)
+    return data:match("8=FIX") and data:match("10=[0-9]+\1")
+end
+
 function session:wait_for_msg(...)
     local msg_types = {...}
     local data
@@ -214,6 +226,24 @@ function session:wait_for_msg(...)
     if data ~= "" then
         log_msg(data)
     end
+    return data
+end
+
+function session:get_next_msg()
+    local data
+    repeat
+        data = ""
+        repeat
+            local chunk, err, partial = self.client:receive(100)
+            if chunk then
+                data = data .. chunk
+            elseif partial then
+                data = data .. partial
+            else
+                error(err)
+            end
+        until chunk == nil
+    until check_full_msg(data)
     return data
 end
 
@@ -340,6 +370,15 @@ function fix.msg_to_fix(msg)
     result = "8=" .. msg[8] .. "\1" .. "9=" .. #result .. "\1" .. result
     local checksum = calculate_checksum(result)
     return result .. "10=" .. checksum .. "\1"
+end
+
+function fix.id_generator()
+    local n = 0
+    return function()
+        local time = os.time()
+        n = n + 1
+        return time + n
+    end
 end
 
 return fix

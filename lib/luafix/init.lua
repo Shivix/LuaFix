@@ -4,7 +4,10 @@ local fix = {}
 
 local old_path = package.path
 package.path = package.path .. ";lib/?.lua"
-fix.Tags = require("lib/luafix.tags")
+local tags = require("lib/luafix.tags")
+fix.Tags = tags.tags
+local header_tags = tags.header_tags
+local repeating_group_tags = tags.repeating_group_tags
 fix.Values = require("lib/luafix.values")
 package.path = old_path
 
@@ -37,65 +40,6 @@ end
 
 local repeating_group = {}
 local repeating_group_mt = { __index = repeating_group }
-
-local header_fields = {
-    [8] = true,
-    [9] = true,
-    [34] = true,
-    [35] = true,
-    [49] = true,
-    [50] = true,
-    [52] = true,
-    [56] = true,
-    [57] = true,
-    [115] = true,
-    [116] = true,
-    [128] = true,
-}
-
--- reference table for repeating groups
-local repeating_group_fields = {
-    [78] = {
-        [79] = true,
-        [80] = true,
-        [467] = true,
-        [661] = true,
-    },
-    [267] = {
-        [269] = true,
-    },
-    [268] = {
-        [15] = true,
-        [58] = true,
-        [126] = true,
-        [269] = true,
-        [270] = true,
-        [271] = true,
-        [272] = true,
-        [273] = true,
-        [276] = true,
-        [290] = true,
-        [299] = true,
-        [432] = true,
-    },
-    [382] = {
-        [375] = true,
-        [337] = true,
-        [437] = true,
-        [438] = true,
-        [655] = true,
-    },
-    [453] = {
-        [447] = true,
-        [448] = true,
-        [452] = true,
-        --[[ TODO: if type == table is sub group
-        [802] = {
-            [523] = true,
-            [803] = true,
-        },]]
-    },
-}
 
 fix.MsgTypes = {
     Heartbeat = "0",
@@ -298,6 +242,7 @@ function fix.sweep_ladder(msg, qty, side)
     for _, group in ipairs(msg.NoMDEntries) do
         if tonumber(group.MDEntryType) == side then
             if group.MDEntryType <= qty then
+                error("not yet implemented")
             else
                 -- sweep (partial) for final time
                 return
@@ -313,7 +258,7 @@ local function table_to_fix(msg)
     local result = ""
     -- handle header fields first
     for tag, value in pairs(msg) do
-        if value ~= nil and header_fields[tag] and tag ~= 8 then
+        if value ~= nil and header_tags[tag] and tag ~= 8 then
             result = result .. tag .. "=" .. value .. "\1"
         end
     end
@@ -325,7 +270,7 @@ local function table_to_fix(msg)
             end
             result = result .. table_to_fix(value)
         else
-            if value ~= nil and not header_fields[tag] and type(value) ~= "function" then
+            if value ~= nil and not header_tags[tag] and type(value) ~= "function" then
                 result = result .. tag .. "=" .. value .. "\1"
             end
         end
@@ -351,8 +296,8 @@ function fix.fix_to_table(fix_msg)
         end
 
         -- start of repeating group
-        if repeating_group_fields[tag] ~= nil then
-            current_repeat = repeating_group_fields[tag]
+        if repeating_group_tags[tag] ~= nil then
+            current_repeat = repeating_group_tags[tag]
             result[tag] = repeat_group
         -- part of current repeating group.
         elseif current_repeat[tag] then

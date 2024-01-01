@@ -1,4 +1,6 @@
-local tags = {
+local M = {}
+
+M.tags = {
     Account = 1,
     AdvId = 2,
     AdvRefID = 3,
@@ -954,4 +956,62 @@ local tags = {
     LegInterestAccrualDate = 956,
 }
 
-return tags
+M.header_tags = {
+    [8] = true,
+    [9] = true,
+    [34] = true,
+    [35] = true,
+    [49] = true,
+    [50] = true,
+    [52] = true,
+    [56] = true,
+    [57] = true,
+    [115] = true,
+    [116] = true,
+    [128] = true,
+}
+
+M.repeating_group_tags = {
+    [78] = {
+        [79] = true,
+        [80] = true,
+        [467] = true,
+        [661] = true,
+    },
+    [267] = {
+        [269] = true,
+    },
+    [268] = {
+        [15] = true,
+        [58] = true,
+        [126] = true,
+        [269] = true,
+        [270] = true,
+        [271] = true,
+        [272] = true,
+        [273] = true,
+        [276] = true,
+        [290] = true,
+        [299] = true,
+        [432] = true,
+    },
+    [382] = {
+        [375] = true,
+        [337] = true,
+        [437] = true,
+        [438] = true,
+        [655] = true,
+    },
+    [453] = {
+        [447] = true,
+        [448] = true,
+        [452] = true,
+        --[[ TODO: if type == table is sub group
+        [802] = {
+            [523] = true,
+            [803] = true,
+        },]]
+    },
+}
+
+return M

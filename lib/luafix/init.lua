@@ -136,6 +136,23 @@ function fix.new_session(
     new_sess:wait_for_msg(fix.MsgTypes.Logon)
     return new_sess
 end
+fix.new_initiator = fix.new_session
+
+function fix.new_acceptor(endpoint, port, sender_comp_id, target_comp_id, heartbeat_int)
+    local new_sess = {}
+    setmetatable(new_sess, session_mt)
+    new_sess.sender_comp_id = sender_comp_id
+    new_sess.target_comp_id = target_comp_id
+    new_sess.server = socket.bind(endpoint, port)
+    new_sess.client = new_sess.server:accept()
+    new_sess.client:settimeout(0)
+    new_sess:wait_for_msg(fix.MsgTypes.Logon)
+    local logon = new_sess:new_msg(fix.MsgTypes.Logon)
+    logon.HeartBtInt = heartbeat_int
+    logon.EncryptMethod = "N"
+    new_sess:send(logon)
+    return new_sess
+end
 
 function session:send(msg)
     assert(getmetatable(msg) == msg_mt)

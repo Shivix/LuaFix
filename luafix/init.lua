@@ -4,15 +4,10 @@ local fix_tags = require("luafix.tags")
 local tags = fix_tags.tags
 local header_tags = fix_tags.header_tags
 local repeating_group_tags = fix_tags.repeating_group_tags
+local util = require("luafix.utility")
 local vals = require("luafix.values")
 
-M.tags = fix_tags.tags
-M.msg_types = fix_tags.msg_types
-
-M.InternalLogging = false
-
 local msg_mt = {}
-M.msg_mt = msg_mt
 msg_mt.__index = function(t, k)
     if type(k) == "number" then
         return rawget(t, k)
@@ -34,28 +29,11 @@ msg_mt.__newindex = function(t, k, v)
     error("Incorrect tag name: " .. k)
 end
 msg_mt.__tostring = function(t)
-    return M.soh_to_pipe(M.msg_to_fix(t))
+    return util.soh_to_pipe(M.msg_to_fix(t))
 end
 
 local repeating_group = {}
 local repeating_group_mt = { __index = repeating_group }
-
-local function calculate_checksum(msg)
-    local checksum = 0
-    for i = 1, #msg do
-        checksum = checksum + string.byte(msg, i)
-    end
-    checksum = checksum % 256
-    -- checksum always 3 digits
-    local prefix = ""
-    if checksum < 100 then
-        prefix = "0"
-    end
-    if checksum < 10 then
-        prefix = "00"
-    end
-    return prefix .. checksum
-end
 
 function repeating_group:append(...)
     local new_group = { ... }
@@ -63,25 +41,16 @@ function repeating_group:append(...)
     table.insert(self, new_group)
 end
 
-function M.new_repeating_group(...)
-    local new_repeating_group = { ... }
-    setmetatable(new_repeating_group, repeating_group_mt)
+local function new_repeating_group(...)
+    local result = { ... }
+    setmetatable(result, repeating_group_mt)
     for _, group in ipairs { ... } do
         setmetatable(group, msg_mt)
     end
-    return new_repeating_group
-end
-
-function M.soh_to_pipe(msg)
-    local result, _ = string.gsub(msg, "\1", "|")
-    return result
-end
-function M.pipe_to_soh(msg)
-    local result, _ = string.gsub(msg, "|", "\1")
     return result
 end
 
-function M.sweep_ladder(msg, qty, side)
+local function sweep_ladder(msg, qty, side)
     -- should be multiple orders for each level
     assert(getmetatable(msg) == msg_mt)
     for _, group in ipairs(msg.NoMDEntries) do
@@ -123,7 +92,7 @@ local function table_to_fix(msg)
     return result
 end
 
-function M.fix_to_table(fix_msg)
+local function fix_to_table(fix_msg)
     local result = {}
     setmetatable(result, msg_mt)
 
@@ -159,21 +128,29 @@ function M.fix_to_table(fix_msg)
     return result
 end
 
-function M.msg_to_fix(msg)
+local function msg_to_fix(msg)
     assert(getmetatable(msg) == msg_mt)
     local result = table_to_fix(msg)
     result = "8=" .. msg[8] .. "\1" .. "9=" .. #result .. "\1" .. result
-    local checksum = calculate_checksum(result)
+    local checksum = util.calculate_checksum(result)
     return result .. "10=" .. checksum .. "\1"
 end
 
-function M.id_generator()
-    local n = 0
-    return function()
-        local time = os.time()
-        n = n + 1
-        return time + n
-    end
-end
+M.InternalLogging = false
+
+M.tags = fix_tags.tags
+M.values = vals
+M.msg_types = fix_tags.msg_types
+M.msg_mt = msg_mt
+
+M.new_repeating_group = new_repeating_group
+M.msg_to_fix = msg_to_fix
+M.fix_to_table = fix_to_table
+M.sweep_ladder = sweep_ladder
+
+M.calculate_checksum = util.calculate_checksum
+M.id_generator = util.id_generator
+M.pipe_to_soh = util.pipe_to_soh
+M.soh_to_pipe = util.soh_to_pipe
 
 return M

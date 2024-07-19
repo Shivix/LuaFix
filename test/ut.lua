@@ -9,8 +9,9 @@ local sess = session.null_session()
 local nos = sess:new_msg(mt.NewOrderSingle)
 
 local id_gen = fix.id_generator()
-print(id_gen())
-print(id_gen())
+local first_id = id_gen()
+local second_id = id_gen()
+assert(second_id == first_id + 1)
 
 nos.Price = 5.2
 nos.ClOrdID = "IDIDID"

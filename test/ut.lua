@@ -1,9 +1,10 @@
 local fix = require("luafix")
-local mt = fix.MsgTypes
-local tags = fix.Tags
-local vals = fix.Values
+local session = require("luafix.session")
+local tags = require("luafix.tags")
+local mt = tags.msg_types
+local vals = require("luafix.values")
 
-local sess = fix.null_session()
+local sess = session.null_session()
 
 local nos = sess:new_msg(mt.NewOrderSingle)
 

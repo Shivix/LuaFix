@@ -1,16 +1,17 @@
 local fix = require("luafix")
+local session = require("luafix.session")
 local posix = require("posix")
-local mt = fix.MsgTypes
-local tags = fix.Tags
-local vals = fix.Values
+local mt = fix.msg_types
+local tags = fix.tags
+local vals = fix.values
 
-local sys_sock = require "posix.sys.socket"
+local sys_sock = require("posix.sys.socket")
 local read, write = sys_sock.socketpair(sys_sock.AF_INET, sys_sock.SOCK_STREAM, 0)
 -- are these actually read/write only?
 print("TEST: ", read, write)
 
-local read_sess = fix.test_session(read)
-local write_sess = fix.test_session(write)
+local read_sess = session.test_session(read)
+local write_sess = session.test_session(write)
 
 local mdr = write_sess:new_msg(mt.MarketDataRequest)
 mdr.MarketDepth = 0

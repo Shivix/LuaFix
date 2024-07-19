@@ -1,13 +1,13 @@
 local fix = require("luafix")
-local mt = fix.MsgTypes
-local tags = fix.Tags
-local vals = fix.Values
+local session = require("luafix.session")
+local mt = fix.msg_types
+local tags = fix.tags
 
 fix.InternalLogging = true
 
-local md_sess = fix.new_session("localhost", 8080, "SENDERMD", "TARGETMD", 30, "user", "password")
+local md_sess = session.new_session("localhost", 8080, "SENDERMD", "TARGETMD", 30, "user", "password")
 local order_sess =
-    fix.new_session("localhost", 8081, "SENDEROR", "TARGETOR", 30, "user", "password")
+    session.new_session("localhost", 8081, "SENDEROR", "TARGETOR", 30, "user", "password")
 
 local mdr = md_sess:new_msg(mt.MarketDataRequest)
 mdr.MarketDepth = 0

@@ -109,6 +109,27 @@ function fix.null_session()
     return new_sess
 end
 
+function fix.test_session(fd)
+    local new_sess = {}
+    setmetatable(new_sess, session_mt)
+    new_sess.sender_comp_id = "TEST_SENDER"
+    new_sess.target_comp_id = "TEST_TARGET"
+
+    for k, v in pairs(socket) do
+        print(k)
+    end
+    new_sess.client = socket.tcp(fd)
+    new_sess.client:settimeout(0)
+
+    local logon = new_sess:new_msg(fix.MsgTypes.Logon)
+    logon.HeartBtInt = 30
+    logon.EncryptMethod = "N"
+    new_sess:send(logon)
+    new_sess:wait_for_msg(fix.MsgTypes.Logon)
+
+    return new_sess
+end
+
 function fix.new_session(
     endpoint,
     port,

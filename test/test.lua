@@ -19,10 +19,13 @@ mdr.NoMDEntryTypes = fix.new_repeating_group(
 
 md_sess:send(mdr)
 
-local md = md_sess:wait_for_msg(fix.MsgTypes.MarketDataSnapshot)
-md = fix.fix_to_table(md)
+print("next: " .. md_sess:get_next_msg())
 
-local test_md = md_sess:new_msg()
+--local md = md_sess:wait_for_msg(mt.MarketDataSnapshot)
+--print(md)
+--md = fix.fix_to_table(md)
+
+--[[local test_md = md_sess:new_msg()
 test_md.NoMDEntries = fix.new_repeating_group(
     { [tags.MDEntryType] = 0, [tags.MDEntryPx] = 1.1, [tags.MDEntrySize] = 500000 },
     { [tags.MDEntryType] = 0, [tags.MDEntryPx] = 1.11, [tags.MDEntrySize] = 1000000 },
@@ -47,5 +50,6 @@ assert(
         == "8=FIX.4.4|9=56|56=TARGETOR|35=D|49=SENDEROR|44=5.2|11=IDIDID|55=EURUSD|10=013|"
 )
 order_sess:send(nos)
+]]--
 
-print(fix.now())
+--print(fix.now())

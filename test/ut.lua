@@ -6,6 +6,11 @@ local vals = fix.Values
 local sess = fix.null_session()
 
 local nos = sess:new_msg(mt.NewOrderSingle)
+
+local id_gen = fix.id_generator()
+print(id_gen())
+print(id_gen())
+
 nos.Price = 5.2
 nos.ClOrdID = "IDIDID"
 nos.Symbol = "EURUSD"

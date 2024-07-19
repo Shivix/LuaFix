@@ -1,4 +1,4 @@
-local fix = require("lib/luafix")
+local fix = require("luafix")
 local mt = fix.MsgTypes
 local tags = fix.Tags
 local vals = fix.Values

@@ -2,14 +2,11 @@ local socket = require("socket")
 
 local fix = {}
 
-local old_path = package.path
-package.path = package.path .. ";lib/?.lua"
-local tags = require("lib/luafix.tags")
+local tags = require("luafix.tags")
 fix.Tags = tags.tags
 local header_tags = tags.header_tags
 local repeating_group_tags = tags.repeating_group_tags
-fix.Values = require("lib/luafix.values")
-package.path = old_path
+fix.Values = require("luafix.values")
 
 fix.InternalLogging = false
 

@@ -24,6 +24,7 @@ function M.null_session()
     setmetatable(new_sess, session_mt)
     new_sess.sender_comp_id = "NULL_SENDER"
     new_sess.target_comp_id = "NULL_TARGET"
+    new_sess.seq_num = 0
     return new_sess
 end
 
@@ -62,6 +63,7 @@ function M.new_session(
     setmetatable(new_sess, session_mt)
     new_sess.sender_comp_id = sender_comp_id
     new_sess.target_comp_id = target_comp_id
+    new_sess.seq_num = 0
     -- initiator
     new_sess.client = socket.tcp()
     new_sess.client:settimeout(0)
@@ -82,6 +84,7 @@ function M.new_acceptor(endpoint, port, sender_comp_id, target_comp_id, heartbea
     setmetatable(new_sess, session_mt)
     new_sess.sender_comp_id = sender_comp_id
     new_sess.target_comp_id = target_comp_id
+    new_sess.seq_num = 0
     new_sess.server = socket.bind(endpoint, port)
     new_sess.client = new_sess.server:accept()
     new_sess.client:settimeout(0)
@@ -96,6 +99,8 @@ end
 function session:send(msg)
     assert(getmetatable(msg) == fix.msg_mt)
     assert(self.client ~= nil)
+    self.seq_num = self.seq_num + 1
+    msg.MsgSeqNum = self.seq_num
     self.client:send(fix.msg_to_fix(msg))
 end
 

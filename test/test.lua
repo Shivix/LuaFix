@@ -51,5 +51,8 @@ assert(
         == "8=FIX.4.4|9=56|56=TARGETOR|35=D|49=SENDEROR|44=5.2|11=IDIDID|55=EURUSD|10=013|"
 )
 order_sess:send(nos)
+assert(order_sess.seq_num == 2)
+order_sess:send(nos)
+assert(order_sess.seq_num == 3)
 
 print(session.now())

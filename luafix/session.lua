@@ -49,14 +49,13 @@ function M.test_session(fd)
     return new_sess
 end
 
+--- Options: heartbeat_int, reset_seq_num, username, password
 function M.new_session(
     endpoint,
     port,
     sender_comp_id,
     target_comp_id,
-    heartbeat_int,
-    username,
-    password
+    options
 )
     -- TODO: basic version of new_msg outside of session that can use here and use in tests
     local new_sess = {}
@@ -69,17 +68,18 @@ function M.new_session(
     new_sess.client:settimeout(0)
     new_sess.client:connect(endpoint, port)
     local logon = new_sess:new_msg(mt.Logon)
-    logon.HeartBtInt = heartbeat_int
+    logon.HeartBtInt = options.heartbeat_int or "30"
     logon.EncryptMethod = "N"
-    logon.Username = username
-    logon.Password = password
+    logon.ResetSeqNumFlag = options.reset_seq_num or "Y"
+    logon.Username = options.username
+    logon.Password = options.password
     new_sess:send(logon)
     new_sess:wait_for_msg(mt.Logon)
     return new_sess
 end
 M.new_initiator = M.new_session
 
-function M.new_acceptor(endpoint, port, sender_comp_id, target_comp_id, heartbeat_int)
+function M.new_acceptor(endpoint, port, sender_comp_id, target_comp_id)
     local new_sess = {}
     setmetatable(new_sess, session_mt)
     new_sess.sender_comp_id = sender_comp_id
@@ -88,9 +88,9 @@ function M.new_acceptor(endpoint, port, sender_comp_id, target_comp_id, heartbea
     new_sess.server = socket.bind(endpoint, port)
     new_sess.client = new_sess.server:accept()
     new_sess.client:settimeout(0)
-    new_sess:wait_for_msg(mt.Logon)
+    local inc_logon = fix.fix_to_table(new_sess:wait_for_msg(mt.Logon))
     local logon = new_sess:new_msg(mt.Logon)
-    logon.HeartBtInt = heartbeat_int
+    logon.HeartBtInt = inc_logon.HeartBtInt
     logon.EncryptMethod = "N"
     new_sess:send(logon)
     return new_sess

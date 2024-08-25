@@ -68,11 +68,15 @@ local function sweep_ladder(msg, qty, side)
     end
 end
 
-local function table_to_fix(msg)
+local function table_to_fix(msg, ignore_tags)
+    local ignore = {}
+    for _, tag in pairs(ignore_tags or {}) do
+        ignore[tag] = true
+    end
     local result = ""
     -- handle header fields first
     for tag, value in pairs(msg) do
-        if value ~= nil and header_tags[tag] and tag ~= 8 then
+        if value ~= nil and header_tags[tag] and not ignore[tag] then
             result = result .. tag .. "=" .. value .. "\1"
         end
     end
@@ -82,9 +86,9 @@ local function table_to_fix(msg)
             if #value > 0 then
                 result = result .. tag .. "=" .. #value .. "\1"
             end
-            result = result .. table_to_fix(value)
+            result = result .. table_to_fix(value, ignore_tags)
         else
-            if value ~= nil and not header_tags[tag] and type(value) ~= "function" then
+            if value ~= nil and not header_tags[tag] and not ignore_tags[tag] and type(value) ~= "function" then
                 result = result .. tag .. "=" .. value .. "\1"
             end
         end
@@ -130,8 +134,9 @@ end
 
 local function msg_to_fix(msg)
     assert(getmetatable(msg) == msg_mt)
-    local result = table_to_fix(msg)
-    result = "8=" .. msg[8] .. "\1" .. "9=" .. #result .. "\1" .. result
+    local ignore_tags = {8, 9, 35, 10}
+    local body = table_to_fix(msg, ignore_tags)
+    local result = "8=" .. msg[8] .. "\1" .. "9=" .. #body .. "\1" .. "35=" .. msg[35] .. "\1" .. body
     local checksum = util.calculate_checksum(result)
     return result .. "10=" .. checksum .. "\1"
 end

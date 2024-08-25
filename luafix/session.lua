@@ -175,6 +175,7 @@ function session:new_msg(msg_type)
         [35] = msg_type,
         [49] = self.sender_comp_id,
         [56] = self.target_comp_id,
+        [52] = M.now(),
     }
     setmetatable(msg, fix.msg_mt)
     return msg

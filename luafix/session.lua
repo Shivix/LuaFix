@@ -42,7 +42,7 @@ function M.test_session(fd)
 
     local logon = new_sess:new_msg(mt.Logon)
     logon.HeartBtInt = 30
-    logon.EncryptMethod = "N"
+    logon.EncryptMethod = "0"
     new_sess:send(logon)
     new_sess:wait_for_msg(mt.Logon)
 

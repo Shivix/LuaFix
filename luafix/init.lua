@@ -88,7 +88,7 @@ local function table_to_fix(msg, ignore_tags)
             end
             result = result .. table_to_fix(value, ignore_tags)
         else
-            if value ~= nil and not header_tags[tag] and not ignore_tags[tag] and type(value) ~= "function" then
+            if value ~= nil and not header_tags[tag] and not ignore[tag] and type(value) ~= "function" then
                 result = result .. tag .. "=" .. value .. "\1"
             end
         end
@@ -136,7 +136,9 @@ local function msg_to_fix(msg)
     assert(getmetatable(msg) == msg_mt)
     local ignore_tags = {8, 9, 35, 10}
     local body = table_to_fix(msg, ignore_tags)
-    local result = "8=" .. msg[8] .. "\1" .. "9=" .. #body .. "\1" .. "35=" .. msg[35] .. "\1" .. body
+    -- add MsgType length, and 35= and delimiter
+    local body_length = #body + 4 + msg[35]:len()
+    local result = "8=" .. msg[8] .. "\1" .. "9=" .. body_length .. "\1" .. "35=" .. msg[35] .. "\1" .. body
     local checksum = util.calculate_checksum(result)
     return result .. "10=" .. checksum .. "\1"
 end

@@ -17,6 +17,11 @@ local session_mt = {
             self.client:close()
         end
     end,
+    __close = function(self)
+        if self.client then
+            self.client:close()
+        end
+    end,
 }
 
 function M.null_session()

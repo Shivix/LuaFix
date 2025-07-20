@@ -6,8 +6,8 @@ local vals = fix.values
 
 fix.InternalLogging = true
 
-local md_sess = session.new_session("localhost", 8080, "SENDERMD", "TARGETMD", { username = "user", password = "password" })
-local order_sess =
+local md_sess <close> = session.new_session("localhost", 8080, "SENDERMD", "TARGETMD", { username = "user", password = "password" })
+local order_sess <close> =
     session.new_session("localhost", 8081, "SENDEROR", "TARGETOR", { username = "user", password = "password"})
 
 local mdr = md_sess:new_msg(mt.MarketDataRequest)
